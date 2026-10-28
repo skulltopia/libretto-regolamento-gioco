@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Skulltopia | Regolamento ufficiale</title>
+<style>
+:root{color-scheme:dark;--bg:#11151c;--panel:#202734;--fg:#f6f7fa;--accent:#e9c178}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}header{position:sticky;top:0;z-index:5;background:#171d27;border-bottom:1px solid #343d4a;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font-size:18px;letter-spacing:.08em;margin:0}small{display:block;color:#b8c0cd;font-size:12px}.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}button,a.action{border:1px solid #576171;background:var(--panel);color:var(--fg);padding:9px 12px;border-radius:8px;font-size:14px;text-decoration:none;cursor:pointer}button:disabled{opacity:.45;cursor:default}#status{padding:18px;text-align:center;color:#d6dce5}main{max-width:1000px;margin:0 auto;padding:14px 8px 60px}.page{position:relative;margin:0 auto 18px;background:#fff;box-shadow:0 4px 18px #0008;max-width:100%;overflow:hidden}.page canvas{display:block;width:100%;height:auto}.page .loading{color:#4b5563;text-align:center;padding:20px;position:absolute;top:10px;width:100%;font-size:13px}.page-label{color:#abb3c0;text-align:center;margin:-8px 0 18px;font-size:12px}#error{display:none;padding:18px;max-width:760px;margin:20px auto;background:#332421;border:1px solid #9e5947;border-radius:10px;line-height:1.6}#error a{color:#ffe0a2}@media(max-width:600px){header{justify-content:center}h1{text-align:center}.actions{justify-content:center}main{padding:8px 5px 45px}.page{margin-bottom:14px}}
+</style>
+</head>
+<body>
+<header><div><h1>SKULLTOPIA</h1><small>Regolamento ufficiale • Libera il campo di battaglia</small></div><div class="actions"><button id="minus" aria-label="Riduci dimensione">−</button><span id="zoomLabel">100%</span><button id="plus" aria-label="Ingrandisci">+</button><a class="action" id="download" download>Scarica PDF</a></div></header>
+<div id="status" role="status">Caricamento del regolamento…</div>
+<div id="error" role="alert"></div>
+<main id="pages" aria-label="Pagine del regolamento"></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* Il PDF deve trovarsi nella stessa cartella di questo index.html. */
+const PDF_FILE='skulltopia istruzioni gioco libera il campo di battaglia.pdf';
+const url=encodeURI(PDF_FILE);
+document.getElementById('download').href=url;
+const pages=document.getElementById('pages'),status=document.getElementById('status'),error=document.getElementById('error');
+let doc=null,zoom=1,observer=null;
+function showError(message){status.style.display='none';error.style.display='block';error.innerHTML=`<strong>Non è stato possibile aprire il regolamento.</strong><p>${message}</p><p><a href="${url}">Apri o scarica il PDF originale</a></p>`}
+function renderPages(){if(!doc)return;pages.replaceChildren();if(observer)observer.disconnect();observer=new IntersectionObserver(entries=>{for(const e of entries){if(e.isIntersecting){observer.unobserve(e.target);renderOne(Number(e.target.dataset.page),e.target)}}},{rootMargin:'700px 0px'});for(let i=1;i<=doc.numPages;i++){const wrapper=document.createElement('section');wrapper.className='page';wrapper.dataset.page=i;wrapper.innerHTML='<div class="loading">Caricamento pagina '+i+'…</div>';wrapper.style.aspectRatio='1 / 1.414';pages.appendChild(wrapper);observer.observe(wrapper)}}
+async function renderOne(num,wrapper){try{const page=await doc.getPage(num);if(!wrapper.isConnected)return;const viewport=page.getViewport({scale:1});const available=Math.min(960,Math.max(280,pages.clientWidth-4));const cssScale=(available/viewport.width)*zoom;const pixelRatio=Math.min(window.devicePixelRatio||1,2);const v=page.getViewport({scale:cssScale*pixelRatio});const canvas=document.createElement('canvas');canvas.width=Math.floor(v.width);canvas.height=Math.floor(v.height);canvas.style.width=(v.width/pixelRatio)+'px';canvas.style.maxWidth='none';canvas.style.height=(v.height/pixelRatio)+'px';wrapper.style.width=(v.width/pixelRatio)+'px';wrapper.style.maxWidth='none';wrapper.style.aspectRatio='auto';wrapper.replaceChildren(canvas);await page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport:v}).promise}catch(e){wrapper.textContent='Impossibile visualizzare pagina '+num;console.error(e)}}
+function changeZoom(delta){zoom=Math.min(1.8,Math.max(.6,Math.round((zoom+delta)*10)/10));document.getElementById('zoomLabel').textContent=Math.round(zoom*100)+'%';renderPages()}
+document.getElementById('minus').onclick=()=>changeZoom(-.1);document.getElementById('plus').onclick=()=>changeZoom(.1);
+(async()=>{try{if(!window.pdfjsLib)throw Error('Lettore non disponibile: verifica la connessione internet.');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';doc=await pdfjsLib.getDocument({url}).promise;status.style.display='none';renderPages()}catch(e){console.error(e);showError('Verifica che il file PDF sia stato caricato su GitHub con lo stesso identico nome, nella cartella principale del progetto.')}})();
+</script>
+</body>
+</html>
